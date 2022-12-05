@@ -19,6 +19,8 @@ class Map:
 
 class Player:
     def __init__(self, name):
+        self.health = 10
+        self.maxHealth = 10
         self.symbol = "P"
         self.name = name
         self.currentPosition = [0, 0]
@@ -39,6 +41,7 @@ class Player:
 class EnemyWarrior:
     def __init__(self):
         self.health = 10
+        self.maxHealth = 10
         self.symbol = "W"
         self.currentlyFacing = "down"
         self.currentState = "patrol"
@@ -106,13 +109,26 @@ class EnemyWarrior:
             self.movePosition([newX, newY])
             return False
 
+    def attack(self):
+        player.health = player.health - 1
+        pass
+
     def pursue(self):
         x = self.currentPosition[0]
         y = self.currentPosition[1]
         playX = player.currentPosition[0]
         playY = player.currentPosition[1]
         newPos = [x, y]
-        if x == playX:
+        if x == playX and y == playY:
+            self.attack()
+            arr = [-1, 1]
+            randAmount = random.randint(0, 1)
+            randDir = random.randint(0, 1)
+
+            self.currentPosition[randDir] = (
+                self.currentPosition[randDir] + arr[randAmount]
+            )
+        elif x == playX:
             if y < playY:
                 newPos[1] = newPos[1] + 1
             else:
@@ -135,6 +151,7 @@ class EnemyWarrior:
         self.movePosition(newPos)
 
     def returnToPosition(self):
+        homeX = self.returnPosition[0]
         homeY = self.returnPosition[1]
         x = self.currentPosition[0]
         y = self.currentPosition[1]
@@ -193,6 +210,9 @@ def handleDrawCurrentMap():
         for yIndex, y in enumerate(x):
             mapWindow.addch(str(y))
         mapWindow.move(xIndex + 1, 0)
+
+    mapWindow.addstr(str(player.health))
+
     mapWindow.refresh()
 
 
