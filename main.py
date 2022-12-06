@@ -3,9 +3,7 @@ import time
 import os
 import numpy
 import random
-
 import curses
-from curses import wrapper
 
 
 class Map:
@@ -19,7 +17,7 @@ class Map:
 
 class Player:
     def __init__(self, name):
-        self.health = 10
+        self.health = 2
         self.maxHealth = 10
         self.symbol = "P"
         self.name = name
@@ -38,25 +36,60 @@ class Player:
         pass
 
 
-class EnemyWarrior:
-    def __init__(self):
-        self.health = 10
-        self.maxHealth = 10
-        self.symbol = "W"
-        self.currentlyFacing = "down"
-        self.currentState = "patrol"
-        self.homePosition = [8, 8]
+class EnemyClass:
+    def __init__(
+        self,
+        health,
+        strength,
+        defence,
+        dexterity,
+        symbol,
+        facingDir,
+        initialState,
+        homePos,
+        aggroRange,
+        maxPursueRng,
+    ):
+        self.health = health
+        self.maxHealth = health
+        self.strength = strength
+        self.defence = defence
+        self.dexterity = dexterity
+        self.symbol = symbol
+        self.currentlyFacing = facingDir
+        self.currentState = initialState
+        self.homePosition = homePos
         self.currentPosition = self.homePosition
         self.previousPosition = self.currentPosition
-        self.aggroRange = 3
-        self.maxPursueRange = 4
+        self.aggroRange = aggroRange
+        self.maxPursueRange = maxPursueRng
         self.currentPursueRange = 0
         self.returnPosition = self.homePosition
 
     def checkState(self):
+        x = self.currentPosition[0]
+        y = self.currentPosition[1]
+        playerX = player.currentPosition[0]
+        playerY = player.currentPosition[1]
         if self.currentState == "return":
             return
-        if (
+
+        elif (
+            (playerX == x + 1 and playerY == y)
+            or (playerX == x - 1 and playerY == y)
+            or (playerY == y + 1 and playerX == x)
+            or (playerY == y - 1 and playerX == x)
+            or (playerX == x and playerY == y)
+        ):
+            self.currentState = "attacking"
+            arr = [-1, 1]
+            randAmount = random.randint(0, 1)
+            randDir = random.randint(0, 1)
+
+            self.currentPosition[randDir] = (
+                self.currentPosition[randDir] + arr[randAmount]
+            )
+        elif (
             abs(self.currentPosition[0] - player.currentPosition[0]) <= self.aggroRange
             and abs(self.currentPosition[1] - player.currentPosition[1])
             <= self.aggroRange
@@ -73,6 +106,8 @@ class EnemyWarrior:
             self.pursue()
         elif self.currentState == "return":
             self.returnToPosition()
+        elif self.currentState == "attacking":
+            self.attack()
 
     def patrol(self):
         dirs = ["up", "down", "left", "right"]
@@ -111,7 +146,6 @@ class EnemyWarrior:
 
     def attack(self):
         player.health = player.health - 1
-        pass
 
     def pursue(self):
         x = self.currentPosition[0]
@@ -119,16 +153,17 @@ class EnemyWarrior:
         playX = player.currentPosition[0]
         playY = player.currentPosition[1]
         newPos = [x, y]
-        if x == playX and y == playY:
-            self.attack()
-            arr = [-1, 1]
-            randAmount = random.randint(0, 1)
-            randDir = random.randint(0, 1)
+        # if x == playX and y == playY:
+        #     self.currentState = "attacking"
+        #     arr = [-1, 1]
+        #     randAmount = random.randint(0, 1)
+        #     randDir = random.randint(0, 1)
 
-            self.currentPosition[randDir] = (
-                self.currentPosition[randDir] + arr[randAmount]
-            )
-        elif x == playX:
+        #     self.currentPosition[randDir] = (
+        #         self.currentPosition[randDir] + arr[randAmount]
+        #     )
+
+        if x == playX:
             if y < playY:
                 newPos[1] = newPos[1] + 1
             else:
@@ -180,6 +215,11 @@ class EnemyWarrior:
     def movePosition(self, pos):
         self.previousPosition = self.currentPosition
         self.currentPosition = pos
+
+
+class EnemyWarrior(EnemyClass):
+    def __init__(self):
+        super().__init__(10, 10, 10, 10, "W", "down", "patrol", [8, 8], 5, 4)
 
 
 controls = {
@@ -239,6 +279,8 @@ def updateNPCs():
 
 
 def updatePlayer():
+    if player.health <= 0:
+        handleEndGame()
     xPos = player.currentPosition[1]
     yPos = player.currentPosition[0]
     prevXPos = player.previousPosition[1]
@@ -247,9 +289,23 @@ def updatePlayer():
     currentMap.currentMapState[yPos][xPos] = player.symbol
 
 
+def handleEndGame():
+
+    mainScreen.clear()
+    mainScreen.addstr("Game Over!")
+    mainScreen.refresh()
+    mainScreen.getch()
+    pass
+
+
 def mainloop():
     updatePlayer()
     updateNPCs()
+    debugWindow.move(10, 10)
+    debugWindow.addstr(currentMap.entities[0].currentState)
+    debugWindow.addstr(str(currentMap.entities[0].currentPosition))
+    debugWindow.addstr(str(player.currentPosition))
+    debugWindow.refresh()
     handleDrawCurrentMap()
     keyboardListener()
 
@@ -257,8 +313,10 @@ def mainloop():
 def initGame():
     global mainScreen
     global mapWindow
+    global debugWindow
     mainScreen = curses.initscr()
     mapWindow = curses.newwin(0, 0)
+    debugWindow = curses.newwin(30, 30)
     global player
     player = Player("Test")
     global currentMap
