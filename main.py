@@ -165,6 +165,16 @@ class EnemyWarrior:
         self.currentPosition = pos
 
 
+class EnemyWarrior(EnemyClass):
+    def __init__(self):
+        super().__init__(10, 10, 10, 10, "W", "down", "patrol", [8, 8], 5, 4)
+
+
+class DebugWindow:
+    def __init__(self):
+        self.startPos = [20, 20]
+
+
 controls = {
     "w": ["playerMove", [-1, 0]],
     "a": ["playerMove", [0, -1]],
@@ -188,11 +198,12 @@ def handlePlayerMove(cord):
 
 
 def handleDrawCurrentMap():
-    mapWindow.move(0, 0)
+    mapWindow.move(1, 1)
     for xIndex, x in enumerate(currentMap.currentMapState):
         for yIndex, y in enumerate(x):
             mapWindow.addch(str(y))
-        mapWindow.move(xIndex + 1, 0)
+        mapWindow.move(1 + xIndex + 1, 1)
+
     mapWindow.refresh()
 
 
@@ -235,15 +246,21 @@ def mainloop():
 
 
 def initGame():
+    keyboard.press("f11")
     global mainScreen
     global mapWindow
     mainScreen = curses.initscr()
+    mainScreen.refresh()
     mapWindow = curses.newwin(0, 0)
+    mapWindow.border()
     global player
     player = Player("Test")
     global currentMap
-    currentMap = Map(10, 10)
+    currentMap = Map(80, 20)
     currentMap.entities.append(EnemyWarrior())
+    mapWindow.move(40, 60)
+    mapWindow.addstr("hi")
+    mapWindow.refresh()
 
 
 initGame()
