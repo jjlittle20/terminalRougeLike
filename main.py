@@ -1,17 +1,16 @@
 import keyboard
 import time
 import os
-import numpy
 import random
 import curses
 
 
 class Map:
-    def __init__(self, xLen, yLen):
-        self.mapDefault = [["-" for x in range(xLen)] for x in range(yLen)]
+    def __init__(self, rows, cols):
+        self.mapDefault = [["-" for x in range(cols)] for x in range(rows)]
         self.currentMapState = self.mapDefault
-        self.yLength = len(self.mapDefault) - 1
-        self.xLength = len(self.mapDefault[0]) - 1
+        self.xLength = len(self.mapDefault) - 1
+        self.yLength = len(self.mapDefault[0]) - 1
         self.entities = []
 
 
@@ -251,10 +250,10 @@ def handlePlayerMove(cord):
 
 def handleDrawCurrentMap():
     mapWindow.move(1, 1)
-    for xIndex, x in enumerate(currentMap.currentMapState):
-        for yIndex, y in enumerate(x):
-            mapWindow.addch(str(y))
-        mapWindow.move(1 + xIndex + 1, 1)
+    for yIndex, y in enumerate(currentMap.currentMapState):
+        for xIndex, x in enumerate(y):
+            mapWindow.addch(str(x))
+        mapWindow.move(1 + yIndex + 1, 1)
 
     mapWindow.refresh()
 
@@ -304,11 +303,6 @@ def handleEndGame():
 def mainloop():
     updatePlayer()
     updateNPCs()
-    debugWindow.move(10, 10)
-    debugWindow.addstr(currentMap.entities[0].currentState)
-    debugWindow.addstr(str(currentMap.entities[0].currentPosition))
-    debugWindow.addstr(str(player.currentPosition))
-    debugWindow.refresh()
     handleDrawCurrentMap()
     keyboardListener()
 
@@ -317,7 +311,6 @@ def initGame():
     keyboard.press("f11")
     global mainScreen
     global mapWindow
-    global debugWindow
     mainScreen = curses.initscr()
     mainScreen.refresh()
     mapWindow = curses.newwin(0, 0)
@@ -325,10 +318,10 @@ def initGame():
     global player
     player = Player("Test")
     global currentMap
-    currentMap = Map(80, 20)
+    currentMap = Map(40, 20)
     currentMap.entities.append(EnemyWarrior())
-    mapWindow.move(40, 60)
-    mapWindow.addstr("hi")
+    # mapWindow.move(40, 60)
+    # mapWindow.addstr("hi")
     mapWindow.refresh()
 
 
