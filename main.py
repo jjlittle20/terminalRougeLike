@@ -5,6 +5,25 @@ import random
 import curses
 
 
+class Window:
+    def __init__(self, name, rows, cols, rowsOffset, colsOffset, hasBorder):
+        self.name = name
+        self.rows = rows
+        self.cols = cols
+        self.rowsOffset = rowsOffset
+        self.colsOffset = colsOffset
+        self.hasBorder = hasBorder
+
+    def setupWindow(self):
+        globals()[self.name] = curses.newwin(
+            self.rows, self.cols, self.rowsOffset, self.colsOffset
+        )
+        window = globals()[self.name]
+        if self.hasBorder:
+            window.border()
+        window.refresh()
+
+
 class Map:
     def __init__(self, rows, cols):
         self.mapDefault = [["-" for x in range(cols)] for x in range(rows)]
@@ -307,22 +326,28 @@ def mainloop():
     keyboardListener()
 
 
-def initGame():
+def initTerminal():
     keyboard.press("f11")
     global mainScreen
-    global mapWindow
     mainScreen = curses.initscr()
+    curses.curs_set(0)
     mainScreen.refresh()
-    mapWindow = curses.newwin(0, 0)
-    mapWindow.border()
+    debug = True
+    windowList = []
+    windowList.append(Window("mapWindow", 25, 65, 1, 1, True))
+    if debug:
+        windowList.append(Window("debugWindow", 25, 45, 1, 68, True))
+    for window in windowList:
+        window.setupWindow()
+
+
+def initGame():
+    initTerminal()
     global player
     player = Player("Test")
     global currentMap
-    currentMap = Map(40, 20)
+    currentMap = Map(20, 60)
     currentMap.entities.append(EnemyWarrior())
-    # mapWindow.move(40, 60)
-    # mapWindow.addstr("hi")
-    mapWindow.refresh()
 
 
 initGame()
