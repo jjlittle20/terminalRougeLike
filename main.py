@@ -3,6 +3,7 @@ import time
 import os
 import random
 import curses
+from collections.abc import Iterable
 
 
 class Window:
@@ -240,11 +241,6 @@ class EnemyWarrior(EnemyClass):
         super().__init__(10, 10, 10, 10, "W", "down", "patrol", [8, 8], 5, 4)
 
 
-class DebugWindow:
-    def __init__(self):
-        self.startPos = [20, 20]
-
-
 controls = {
     "w": ["playerMove", [-1, 0]],
     "a": ["playerMove", [0, -1]],
@@ -331,6 +327,43 @@ class DebugWindow(Window):
     def __init__(self):
         super().__init__("debugWindow", 25, 45, 1, 68, True)
         self.setupWindow()
+        self.debugList = {
+            "player": {
+                "currentPosition": True,
+                "health": True,
+            },
+            "entities": {"hostile": {"currentPosition": True, "health": True}},
+            "x": True,
+            "y": lambda: 1 + 1,
+        }
+
+    def debugListToScreen(self):
+        # debugWindow is defined in the initTerminal() function
+        debugWindow.move(1, 0)
+        debugWindow.addstr("DEBUG")
+        debugWindow.addstr(str(debugWindow.getyx()))
+        debugWindow.move(2, 0)
+
+        for listItem in self.debugList:
+            print(str(type(self.debugList[listItem])))
+            self.recurseList(listItem, self.debugList, 1)
+        debugWindow.refresh()
+
+    def recurseList(self, listItem, previousListItem, depth):
+        row, col = debugWindow.getyx()
+        if isinstance(previousListItem[listItem], bool):
+            toPrint = str(listItem)
+            debugWindow.addstr(row + 1, depth * 2, toPrint)
+        elif isinstance(previousListItem[listItem], dict):
+            toPrint = str(listItem) + "_"
+            debugWindow.addstr(row + 1, depth * 2, toPrint)
+            for item in previousListItem[listItem]:
+                self.recurseList(item, previousListItem[listItem], depth + 1)
+        elif callable(previousListItem[listItem]):
+            x = previousListItem[listItem]
+            print(x())
+        else:
+            pass
 
 
 def initTerminal():
@@ -339,16 +372,18 @@ def initTerminal():
     mainScreen = curses.initscr()
     curses.curs_set(0)
     mainScreen.refresh()
-    debug = True
     windowList = []
     windowList.append(Window("mapWindow", 25, 65, 1, 1, True))
     if debug:
-        DebugWindow()
+        dbWindow = DebugWindow()
+        dbWindow.debugListToScreen()
     for window in windowList:
         window.setupWindow()
 
 
 def initGame():
+    global debug
+    debug = True
     initTerminal()
     global player
     player = Player("Test")
