@@ -268,6 +268,7 @@ def handlePlayerMove(cord):
 
 
 def handleDrawCurrentMap():
+    # mapWindow is defined in the terminalInit() function
     mapWindow.move(1, 1)
     for yIndex, y in enumerate(currentMap.currentMapState):
         for xIndex, x in enumerate(y):
@@ -326,6 +327,12 @@ def mainloop():
     keyboardListener()
 
 
+class DebugWindow(Window):
+    def __init__(self):
+        super().__init__("debugWindow", 25, 45, 1, 68, True)
+        self.setupWindow()
+
+
 def initTerminal():
     keyboard.press("f11")
     global mainScreen
@@ -336,7 +343,7 @@ def initTerminal():
     windowList = []
     windowList.append(Window("mapWindow", 25, 65, 1, 1, True))
     if debug:
-        windowList.append(Window("debugWindow", 25, 45, 1, 68, True))
+        DebugWindow()
     for window in windowList:
         window.setupWindow()
 
