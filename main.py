@@ -320,6 +320,9 @@ def mainloop():
     updatePlayer()
     updateNPCs()
     handleDrawCurrentMap()
+    if debug:
+        dbWindow = DebugWindow()
+        dbWindow.debugListToScreen()
     keyboardListener()
 
 
@@ -329,30 +332,34 @@ class DebugWindow(Window):
         self.setupWindow()
         self.debugList = {
             "player": {
-                "currentPosition": True,
-                "health": True,
+                "currentPosition": {"isShown": True, "value": player.currentPosition},
+                "health": {"isShown": True, "value": player.health},
             },
-            "entities": {"hostile": {"currentPosition": True, "health": True}},
-            "x": True,
-            "y": lambda: 1 + 1,
+            # "entities": {"hostile": {"currentPosition": {"isShown":True,"value":"currentPosition"}, "health": True}},
+            # "x": False,
+            # "y": lambda: 1 + 1,
         }
+
+    def debugAllHostile():
+        pass
 
     def debugListToScreen(self):
         # debugWindow is defined in the initTerminal() function
-        debugWindow.move(1, 0)
-        debugWindow.addstr("DEBUG")
-        debugWindow.addstr(str(debugWindow.getyx()))
+        debugWindow.move(1, 1)
+        debugWindow.addstr("--DEBUG--")
         debugWindow.move(2, 0)
 
         for listItem in self.debugList:
             print(str(type(self.debugList[listItem])))
             self.recurseList(listItem, self.debugList, 1)
         debugWindow.refresh()
+        return
 
     def recurseList(self, listItem, previousListItem, depth):
         row, col = debugWindow.getyx()
-        if isinstance(previousListItem[listItem], bool):
-            toPrint = str(listItem)
+        if previousListItem[listItem].__contains__("isShown"):
+
+            toPrint = str(listItem) + " " + str(previousListItem[listItem]["value"])
             debugWindow.addstr(row + 1, depth * 2, toPrint)
         elif isinstance(previousListItem[listItem], dict):
             toPrint = str(listItem) + "_"
@@ -374,22 +381,26 @@ def initTerminal():
     mainScreen.refresh()
     windowList = []
     windowList.append(Window("mapWindow", 25, 65, 1, 1, True))
-    if debug:
-        dbWindow = DebugWindow()
-        dbWindow.debugListToScreen()
     for window in windowList:
         window.setupWindow()
+
+
+def initDebug():
+    dbWindow = DebugWindow()
+    dbWindow.debugListToScreen()
 
 
 def initGame():
     global debug
     debug = True
-    initTerminal()
     global player
     player = Player("Test")
     global currentMap
     currentMap = Map(20, 60)
     currentMap.entities.append(EnemyWarrior())
+    initTerminal()
+    if debug:
+        initDebug()
 
 
 initGame()
