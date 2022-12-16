@@ -1,17 +1,106 @@
 import keyboard
 import time
 import os
-import numpy
 import random
 import curses
+from collections.abc import Iterable
+import itertools
+
+
+class DebugWindow(Window):
+    def __init__(self):
+        super().__init__("debugWindow", 25, 45, 1, 68, True)
+        self.setupWindow()
+        self.debugList = {
+            "player": {
+                "currentPosition": {"isShown": True, "value": player.currentPosition},
+                "health": {"isShown": True, "value": player.health},
+            },
+            "entities": {
+                "hostile": lambda: self.debugAll(
+                    {
+                        "currentPosition": {
+                            "isShown": True,
+                            "value": "currentPosition",
+                        },
+                        "health": {"isShown": True, "value": "health"},
+                    },
+                    currentMap.entities,
+                )
+            },
+            # "x": False,
+            # "y": lambda: 1 + 1,
+        }
+
+    def debugAll(self, options, accessor):
+        values = []
+        for entity in accessor:
+            values.append("id - " + str(entity.id))
+            for option in options:
+                if options[option]["isShown"]:
+                    values.append(str(option) + " " + str(getattr(entity, option)))
+
+        return values
+
+    def debugListToScreen(self):
+        # debugWindow is defined in the initTerminal() function
+        debugWindow.move(1, 1)
+        debugWindow.addstr("--DEBUG--")
+        debugWindow.move(2, 0)
+
+        for listItem in self.debugList:
+            print(str(type(self.debugList[listItem])))
+            self.recurseList(listItem, self.debugList, 1)
+        debugWindow.refresh()
+        return
+
+    def recurseList(self, listItem, previousListItem, depth):
+        # debugWindow is defined in the initTerminal() function
+        row, col = debugWindow.getyx()
+        if callable(previousListItem[listItem]):
+            toPrint = previousListItem[listItem]()
+            r = row
+            for value in toPrint:
+                debugWindow.addstr(r + 1, depth * 2, value)
+                r = r + 1
+        elif previousListItem[listItem].__contains__("isShown"):
+            toPrint = str(listItem) + " " + str(previousListItem[listItem]["value"])
+            debugWindow.addstr(row + 1, depth * 2, toPrint)
+        elif isinstance(previousListItem[listItem], dict):
+            toPrint = str(listItem) + "_"
+            debugWindow.addstr(row + 1, depth * 2, toPrint)
+            for item in previousListItem[listItem]:
+                self.recurseList(item, previousListItem[listItem], depth + 1)
+
+        else:
+            pass
+
+
+class Window:
+    def __init__(self, name, rows, cols, rowsOffset, colsOffset, hasBorder):
+        self.name = name
+        self.rows = rows
+        self.cols = cols
+        self.rowsOffset = rowsOffset
+        self.colsOffset = colsOffset
+        self.hasBorder = hasBorder
+
+    def setupWindow(self):
+        globals()[self.name] = curses.newwin(
+            self.rows, self.cols, self.rowsOffset, self.colsOffset
+        )
+        window = globals()[self.name]
+        if self.hasBorder:
+            window.border()
+        window.refresh()
 
 
 class Map:
-    def __init__(self, xLen, yLen):
-        self.mapDefault = [["-" for x in range(xLen)] for x in range(yLen)]
+    def __init__(self, rows, cols):
+        self.mapDefault = [["-" for x in range(cols)] for x in range(rows)]
         self.currentMapState = self.mapDefault
-        self.yLength = len(self.mapDefault) - 1
-        self.xLength = len(self.mapDefault[0]) - 1
+        self.xLength = len(self.mapDefault) - 1
+        self.yLength = len(self.mapDefault[0]) - 1
         self.entities = []
 
 
@@ -37,6 +126,8 @@ class Player:
 
 
 class EnemyClass:
+    newId = itertools.count()
+
     def __init__(
         self,
         health,
@@ -65,6 +156,7 @@ class EnemyClass:
         self.maxPursueRange = maxPursueRng
         self.currentPursueRange = 0
         self.returnPosition = self.homePosition
+        self.id = next(self.newId)
 
     def checkState(self):
         x = self.currentPosition[0]
@@ -153,16 +245,6 @@ class EnemyClass:
         playX = player.currentPosition[0]
         playY = player.currentPosition[1]
         newPos = [x, y]
-        # if x == playX and y == playY:
-        #     self.currentState = "attacking"
-        #     arr = [-1, 1]
-        #     randAmount = random.randint(0, 1)
-        #     randDir = random.randint(0, 1)
-
-        #     self.currentPosition[randDir] = (
-        #         self.currentPosition[randDir] + arr[randAmount]
-        #     )
-
         if x == playX:
             if y < playY:
                 newPos[1] = newPos[1] + 1
@@ -230,10 +312,6 @@ controls = {
 }
 
 
-def clearScreen():
-    os.system("cls" if os.name == "nt" else "clear")
-
-
 def handlePlayerMove(cord):
     newX = player.currentPosition[0] + cord[0]
     newY = player.currentPosition[1] + cord[1]
@@ -245,13 +323,12 @@ def handlePlayerMove(cord):
 
 
 def handleDrawCurrentMap():
-    mapWindow.move(0, 0)
-    for xIndex, x in enumerate(currentMap.currentMapState):
-        for yIndex, y in enumerate(x):
-            mapWindow.addch(str(y))
-        mapWindow.move(xIndex + 1, 0)
-
-    mapWindow.addstr(str(player.health))
+    # mapWindow is defined in the terminalInit() function
+    mapWindow.move(1, 1)
+    for yIndex, y in enumerate(currentMap.currentMapState):
+        for xIndex, x in enumerate(y):
+            mapWindow.addch(str(x))
+        mapWindow.move(1 + yIndex + 1, 1)
 
     mapWindow.refresh()
 
@@ -295,33 +372,46 @@ def handleEndGame():
     mainScreen.addstr("Game Over!")
     mainScreen.refresh()
     mainScreen.getch()
-    pass
 
 
 def mainloop():
     updatePlayer()
     updateNPCs()
-    debugWindow.move(10, 10)
-    debugWindow.addstr(currentMap.entities[0].currentState)
-    debugWindow.addstr(str(currentMap.entities[0].currentPosition))
-    debugWindow.addstr(str(player.currentPosition))
-    debugWindow.refresh()
     handleDrawCurrentMap()
+    if debug:
+        dbWindow = DebugWindow()
+        dbWindow.debugListToScreen()
     keyboardListener()
 
 
-def initGame():
+def initTerminal():
+    keyboard.press("f11")
     global mainScreen
-    global mapWindow
-    global debugWindow
     mainScreen = curses.initscr()
-    mapWindow = curses.newwin(0, 0)
-    debugWindow = curses.newwin(30, 30)
+    curses.curs_set(0)
+    mainScreen.refresh()
+    windowList = []
+    windowList.append(Window("mapWindow", 25, 65, 1, 1, True))
+    for window in windowList:
+        window.setupWindow()
+
+
+def initDebug():
+    dbWindow = DebugWindow()
+    dbWindow.debugListToScreen()
+
+
+def initGame():
+    global debug
+    debug = True
     global player
     player = Player("Test")
     global currentMap
-    currentMap = Map(10, 10)
+    currentMap = Map(20, 60)
     currentMap.entities.append(EnemyWarrior())
+    initTerminal()
+    if debug:
+        initDebug()
 
 
 initGame()
